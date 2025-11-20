@@ -10,7 +10,7 @@ export default function CreateSale() {
   const router = useRouter();
   const [sale, setSale] = useState<Sales>({
     invoiceNo: "",
-    invoiceDate: new Date().toISOString().split('T')[0],
+    invoiceDate: "",
     customer: undefined,
     deliveryToken: "",
     deliveryAddress: "",

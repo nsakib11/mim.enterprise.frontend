@@ -158,7 +158,7 @@ export default function EditSale() {
       salesItems: [
         ...(prev.salesItems || []),
         {
-          id: 0,
+          id: undefined,
           product: undefined,
           productName: '',
           quantity: 0,
@@ -184,21 +184,40 @@ export default function EditSale() {
     if (!dateTimeString) return "";
     return dateTimeString.slice(0, 16);
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sale) return;
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!sale) return;
+  
+  try {
+    setIsSubmitting(true);
     
-    try {
-      setIsSubmitting(true);
-      await updateSale(saleId, sale);
-      router.push("/sales");
-    } catch (error) {
-      console.error("Error updating sale:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    // Prepare data with IDs only, not full objects
+    const updateData = {
+      ...sale,
+      customerId: sale.customer?.id,
+      salesPersonId: sale.salesPerson?.id,
+      inventoryId: sale.inventory?.id,
+      salesItems: sale.salesItems?.map(item => ({
+        id: item.id,
+        productId: item.product?.id,
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        productCategory: item.productCategory,
+        deliveredQuantity: item.deliveredQuantity,
+        pendingQuantity: item.pendingQuantity
+      }))
+    };
+    
+    await updateSale(saleId, updateData);
+    router.push("/sales");
+  } catch (error) {
+    console.error("Error updating sale:", error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (isLoading) {
     return (
