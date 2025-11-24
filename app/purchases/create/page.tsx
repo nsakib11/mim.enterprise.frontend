@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Purchase, PurchaseItem, Supplier, Product, PaymentType, PaymentStatus, DeliveryStatus, ProductCategory } from "@/utils/types";
-import { createPurchase, getSuppliers, getProducts, getProductsBySupplier } from "@/utils/api";
+import { Purchase, PurchaseItem, Supplier, Product, PaymentType, PaymentStatus, DeliveryStatus, ProductCategory, Inventory } from "@/utils/types";
+import { createPurchase, getSuppliers, getProducts, getProductsBySupplier, getInventories } from "@/utils/api";
 import Link from "next/link";
 
 export default function CreatePurchase() {
@@ -32,16 +32,20 @@ export default function CreatePurchase() {
   const [supplierProducts, setSupplierProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inventories, setInventories] = useState<Inventory[]>([]);
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [suppliersData, productsData] = await Promise.all([
+        const [suppliersData, productsData, inventoryData] = await Promise.all([
           getSuppliers(),
-          getProducts()
+          getProducts(),
+          getInventories(), 
         ]);
         setSuppliers(suppliersData);
         setAllProducts(productsData);
+        setInventories(inventoryData); 
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -132,6 +136,7 @@ export default function CreatePurchase() {
         ...(prev.purchaseItems || []),
         {
           product: undefined,
+          inventory: undefined, 
           orderedQuantity: 0,
           deliveredQuantity: 0,
           pendingQuantity: 0,
@@ -389,6 +394,33 @@ export default function CreatePurchase() {
                         ))}
                       </select>
                     </div>
+                    {/* Inventory Dropdown */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Inventory Location
+  </label>
+
+  <select
+    value={item.inventory?.id || ""}
+    onChange={(e) =>
+      handleItemChange(
+        index,
+        "inventory",
+        inventories.find((inv) => inv.id === Number(e.target.value))!
+      )
+    }
+    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  >
+    <option value="">Select Inventory</option>
+    {inventories.map((inv) => (
+      <option key={inv.id} value={inv.id}>
+        {inv.name} ({inv.code})
+      </option>
+    ))}
+  </select>
+</div>
+
 
                     {/* Ordered Quantity */}
                     <div>

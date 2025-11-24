@@ -11,9 +11,10 @@ import {
   Product, 
   PaymentType, 
   PaymentStatus, 
-  ProductCategory 
+  ProductCategory ,
+  Inventory
 } from "@/utils/types";
-import { getPurchase, updatePurchase, getSuppliers, getProducts, getProductsBySupplier } from "@/utils/api";
+import { getPurchase, updatePurchase, getSuppliers, getProducts, getProductsBySupplier, getInventories } from "@/utils/api";
 import Link from "next/link";
 
 export default function EditPurchase() {
@@ -28,15 +29,18 @@ export default function EditPurchase() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inventories, setInventories] = useState<Inventory[]>([]);
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [purchaseData, suppliersData, productsData] = await Promise.all([
+        const [purchaseData, suppliersData, productsData, inventoryData] = await Promise.all([
           getPurchase(purchaseId),
           getSuppliers(),
-          getProducts()
+          getProducts(),
+          getInventories(), 
         ]);
         
         // Transform PurchaseResponse to Purchase for form
@@ -53,6 +57,7 @@ export default function EditPurchase() {
         setPurchase(transformedPurchase);
         setSuppliers(suppliersData);
         setAllProducts(productsData);
+        setInventories(inventoryData); 
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -115,31 +120,48 @@ export default function EditPurchase() {
     }
   };
 
-  const handleItemChange = (index: number, field: keyof PurchaseItem, value: string | number | Product | ProductCategory) => {
-    setPurchase(prev => {
-      if (!prev) return prev;
-      const updatedItems = [...(prev.purchaseItems || [])];
-      updatedItems[index] = { 
-        ...updatedItems[index], 
-        [field]: value
-      };
-      
-      const totalAmount = updatedItems.reduce((sum, item) => 
-        sum + (item.purchasePrice || 0) * (item.orderedQuantity || 0), 0
-      );
-      const totalOrderedQuantity = updatedItems.reduce((sum, item) => 
-        sum + (item.orderedQuantity || 0), 0
-      );
+ const handleItemChange = (
+  index: number, 
+  field: keyof PurchaseItem, 
+  value: string | number | Product | ProductCategory
+) => {
+  setPurchase(prev => {
+    if (!prev) return prev;
 
-      return {
-        ...prev,
-        purchaseItems: updatedItems,
-        totalAmount,
-        totalOrderedQuantity,
-        dueAmount: totalAmount - (prev.paidAmount || 0)
-      };
-    });
-  };
+    const updatedItems = [...(prev.purchaseItems || [])];
+
+    // Update field value
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value
+    };
+
+    // Auto calculate pending quantity
+    const ordered = updatedItems[index].orderedQuantity || 0;
+    const delivered = updatedItems[index].deliveredQuantity || 0;
+
+    updatedItems[index].pendingQuantity = Math.max(ordered - delivered, 0);
+
+    // Recalculate summary values
+    const totalAmount = updatedItems.reduce(
+      (sum, item) => sum + (item.purchasePrice || 0) * (item.orderedQuantity || 0),
+      0
+    );
+
+    const totalOrderedQuantity = updatedItems.reduce(
+      (sum, item) => sum + (item.orderedQuantity || 0),
+      0
+    );
+
+    return {
+      ...prev,
+      purchaseItems: updatedItems,
+      totalAmount,
+      totalOrderedQuantity,
+      dueAmount: totalAmount - (prev.paidAmount || 0)
+    };
+  });
+};
 
   const addItem = () => {
     setPurchase(prev => prev ? {
@@ -148,6 +170,7 @@ export default function EditPurchase() {
         ...(prev.purchaseItems || []),
         {
           product: undefined,
+          inventory: undefined, 
           orderedQuantity: 0,
           deliveredQuantity: 0,
           pendingQuantity: 0,
@@ -174,30 +197,44 @@ export default function EditPurchase() {
     return dateTimeString.slice(0, 16);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!purchase) return;
-    
-    try {
-      setIsSubmitting(true);
-      // Prepare data for API - convert back to the expected format
-      const submitData: Purchase = {
-        ...purchase,
-        supplier: purchase.supplier,
-        purchaseItems: purchase.purchaseItems?.map(item => ({
-          ...item,
-          product: item.product
-        }))
-      };
-      
-      await updatePurchase(purchaseId, submitData);
-      router.push("/purchases");
-    } catch (error) {
-      console.error('Error updating purchase:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!purchase) return;
+
+  try {
+    setIsSubmitting(true);
+
+    // Map purchase items to match PurchaseItemDto
+    const purchaseItemsDto = purchase.purchaseItems?.map(item => ({
+      id: item.id,
+      productId: item.product?.id,
+      productName: item.product?.name || "",
+      inventoryId: item.inventory?.id,
+      orderedQuantity: item.orderedQuantity || 0,
+      deliveredQuantity: item.deliveredQuantity || 0,
+      pendingQuantity: item.pendingQuantity || 0,
+      purchasePrice: item.purchasePrice || 0,
+      salesPriceMin: item.salesPriceMin || 0,
+      salesPriceMax: item.salesPriceMax || 0,
+      currentPurchasePrice: item.currentPurchasePrice || 0,
+      productCategory: item.productCategory || "HARDWARE"
+    }));
+
+    const submitData = {
+      ...purchase,
+      supplierId: purchase.supplier?.id,
+      purchaseItems: purchaseItemsDto
+    };
+
+    await updatePurchase(purchaseId, submitData);
+    router.push("/purchases");
+  } catch (error) {
+    console.error("Error updating purchase:", error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   if (isLoading) {
     return (
@@ -462,6 +499,32 @@ export default function EditPurchase() {
                         ))}
                       </select>
                     </div>
+{/* Inventory Dropdown */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Inventory Location
+  </label>
+
+  <select
+    value={item.inventory?.id || ""}
+    onChange={(e) =>
+      handleItemChange(
+        index,
+        "inventory",
+        inventories.find((inv) => inv.id === Number(e.target.value))!
+      )
+    }
+    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
+               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  >
+    <option value="">Select Inventory</option>
+    {inventories.map((inv) => (
+      <option key={inv.id} value={inv.id}>
+        {inv.name} ({inv.code})
+      </option>
+    ))}
+  </select>
+</div>
 
                     {/* Ordered Quantity */}
                     <div>
@@ -500,7 +563,30 @@ export default function EditPurchase() {
                         step="0.01"
                       />
                     </div>
+ {/* Delivered Quantity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Delivered Qty</label>
+                      <input 
+                        type="number" 
+                        value={item.deliveredQuantity} 
+                        onChange={(e) => handleItemChange(index, 'deliveredQuantity', parseFloat(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
 
+                    {/* Pending Quantity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Pending Qty</label>
+                      <input 
+                        type="number" 
+                        value={item.pendingQuantity} 
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:outline-none"
+                        step="0.01"
+                      />
+                    </div>
                     {/* Remove Button */}
                     <div className="flex items-end">
                       <button 
