@@ -213,3 +213,63 @@ export const updateInventory = (id: number, inventory: Inventory) =>
 
 export const deleteInventory = (id: number) =>
   axios.delete(`${INVENTORY_API_URL}/${id}`);
+
+
+const INVOICE_API_URL = "http://localhost:8080/api/purchases";
+
+// ------------------ Invoice Generation ------------------
+export const generatePurchaseInvoice = async (purchaseId: number, format: 'pdf' | 'word' | 'excel' = 'pdf'): Promise<Blob> => {
+  const response = await axios.get(`${INVOICE_API_URL}/${purchaseId}/invoice?format=${format}`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export const downloadPurchaseInvoice = async (purchaseId: number, format: 'pdf' | 'word' | 'excel' = 'pdf'): Promise<void> => {
+  try {
+    const blob = await generatePurchaseInvoice(purchaseId, format);
+    
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    
+    const fileExtension = getFileExtension(format);
+    const filename = `purchase_invoice_${purchaseId}.${fileExtension}`;
+    link.download = filename;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error('Error downloading invoice:', error);
+    throw error;
+  }
+};
+
+const getFileExtension = (format: 'pdf' | 'word' | 'excel'): string => {
+  switch (format) {
+    case 'pdf':
+      return 'pdf';
+    case 'word':
+      return 'doc';
+    case 'excel':
+      return 'xlsx';
+    default:
+      return 'pdf';
+  }
+};
+
+const getContentType = (format: 'pdf' | 'word' | 'excel'): string => {
+  switch (format) {
+    case 'pdf':
+      return 'application/pdf';
+    case 'word':
+      return 'application/msword';
+    case 'excel':
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    default:
+      return 'application/pdf';
+  }
+};
