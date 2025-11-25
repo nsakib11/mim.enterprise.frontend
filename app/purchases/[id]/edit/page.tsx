@@ -50,7 +50,8 @@ export default function EditPurchase() {
           supplier: suppliersData.find(s => s.id === purchaseResponse.supplierId) || undefined,
           purchaseItems: purchaseResponse.purchaseItems?.map((item: PurchaseItemResponse) => ({
             ...item,
-            product: productsData.find(p => p.id === item.productId) || undefined
+            product: productsData.find(p => p.id === item.productId) || undefined,
+             inventory: inventoryData.find(inv => inv.id === item.inventoryId) || undefined,
           })) || []
         };
         

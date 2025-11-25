@@ -163,18 +163,38 @@ export default function CreatePurchase() {
     return dateTimeString.slice(0, 16);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsSubmitting(true);
-      await createPurchase(purchase);
-      router.push("/purchases");
-    } catch (error) {
-      console.error('Error creating purchase:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    setIsSubmitting(true);
+
+    // Convert nested objects to IDs for backend DTO
+    const payload = {
+      ...purchase,
+      supplierId: purchase.supplier?.id || null,
+      purchaseItems: purchase.purchaseItems.map(item => ({
+        productId: item.product?.id || null,
+        inventoryId: item.inventory?.id || null,
+        orderedQuantity: item.orderedQuantity,
+        deliveredQuantity: item.deliveredQuantity,
+        pendingQuantity: item.pendingQuantity,
+        purchasePrice: item.purchasePrice,
+        salesPriceMin: item.salesPriceMin,
+        salesPriceMax: item.salesPriceMax,
+        currentPurchasePrice: item.currentPurchasePrice,
+        productCategory: item.productCategory
+      }))
+    };
+
+    await createPurchase(payload);
+    router.push("/purchases");
+  } catch (error) {
+    console.error('Error creating purchase:', error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   // Get products to display in dropdown (supplier products if available, otherwise all products)
   const displayProducts = purchase.supplier ? supplierProducts : allProducts;
