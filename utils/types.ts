@@ -151,6 +151,7 @@ export interface PurchaseItemResponse {
   salesPriceMax: number;
   currentPurchasePrice: number;
   inventory?: Inventory;
+  inventoryId?:number,
   productCategory: ProductCategory;
 }
 
