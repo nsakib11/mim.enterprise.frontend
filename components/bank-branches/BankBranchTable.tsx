@@ -4,10 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { BankBranch, Bank } from "@/utils/types";
 import { deleteBankBranch } from "@/utils/api";
-import StatusBadge from "../components/StatusBadge";
-import ActionsDropdown from "../components/ActionsDropdown";
-import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
-import Toast from "../components/Toast";
+import StatusBadge from "../StatusBadge";
+import ActionsDropdown from "../ActionsDropdown";
+import DeleteConfirmationModal from "../DeleteConfirmationModal";
+import Toast from "../Toast";
 
 interface BankBranchTableProps {
   initialBranches: BankBranch[];

@@ -290,8 +290,8 @@
 import Link from "next/link";
 import { BankBranch, Bank } from "@/utils/types";
 import { getBankBranches, getBanks } from "@/utils/api";
-import BankBranchTable from "@/app/components/BankBranchTable";
-import StatisticsCards from "@/app/components/StatisticsCards";
+import BankBranchTable from "@/components/bank-branches/BankBranchTable";
+import StatisticsCards from "@/components/bank-branches/StatisticsCards";
 
 export default async function BankBranchListPage() {
   // Server-side data fetching
