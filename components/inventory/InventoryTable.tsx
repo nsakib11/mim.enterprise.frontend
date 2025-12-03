@@ -1,50 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { BankBranch, Bank } from "@/utils/types";
-import { deleteBankBranch } from "@/utils/api";
-import { usePagination } from "@/utils/usePagination";
+import { useState, useMemo } from "react";
+import { Inventory } from "@/utils/types";
+import { deleteInventory } from "@/utils/api";
 import StatusBadge from "../StatusBadge";
 import ActionsDropdown from "../ActionsDropdown";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import Toast from "../Toast";
 import Pagination from "../Pagination";
 import TableControls from "../TableControl";
+import Link from "next/link";
 
-interface BankBranchTableProps {
-  initialBranches: BankBranch[];
-  initialBanks: Bank[];
+interface InventoryTableProps {
+  initialInventories: Inventory[];
 }
 
-export default function BankBranchTable({ 
-  initialBranches, 
-  initialBanks 
-}: BankBranchTableProps) {
-  const [bankBranches, setBankBranches] = useState<BankBranch[]>(initialBranches);
-  const [banks] = useState<Bank[]>(initialBanks);
+export default function InventoryTable({ initialInventories }: InventoryTableProps) {
+  const [inventories, setInventories] = useState<Inventory[]>(initialInventories);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Use pagination hook
-  const {
-    currentPage,
-    setCurrentPage,
-    paginatedData,
-    totalPages,
-    totalItems,
-    searchTerm,
-    setSearchTerm,
-    startIndex,
-    endIndex,
-    hasNextPage,
-    hasPrevPage,
-    setPageSize,
-  } = usePagination({
-    data: bankBranches,
-    itemsPerPage: 10,
-    searchableFields: ['code', 'name', 'nameBn', 'address', 'mobile', 'email', 'routingNo'],
-  });
-  
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; branchId?: number; branchName?: string }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; inventoryId?: number; inventoryName?: string }>({
     isOpen: false,
   });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -52,30 +30,54 @@ export default function BankBranchTable({
     message: '',
     type: 'success'
   });
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Filter inventories based on search term
+  const filteredInventories = useMemo(() => {
+    if (!searchTerm.trim()) return inventories;
+    
+    const lowercasedSearch = searchTerm.toLowerCase();
+    return inventories.filter(inventory => 
+      inventory.code.toLowerCase().includes(lowercasedSearch) ||
+      inventory.name.toLowerCase().includes(lowercasedSearch) ||
+      (inventory.nameBn && inventory.nameBn.toLowerCase().includes(lowercasedSearch)) ||
+      (inventory.address && inventory.address.toLowerCase().includes(lowercasedSearch)) ||
+      (inventory.responsiblePerson && inventory.responsiblePerson.toLowerCase().includes(lowercasedSearch)) ||
+      (inventory.mobile && inventory.mobile.toLowerCase().includes(lowercasedSearch))
+    );
+  }, [inventories, searchTerm]);
+
+  // Calculate pagination values
+  const totalItems = filteredInventories.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+  // Get current page data
+  const paginatedInventories = useMemo(() => {
+    return filteredInventories.slice(startIndex, endIndex);
+  }, [filteredInventories, startIndex, endIndex]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleDeleteClick = (branchId?: number, branchName?: string) => {
-    if (!branchId) return;
-    setDeleteModal({ isOpen: true, branchId, branchName });
+  const handleDeleteClick = (inventoryId?: number, inventoryName?: string) => {
+    if (!inventoryId) return;
+    setDeleteModal({ isOpen: true, inventoryId, inventoryName });
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.branchId) return;
+    if (!deleteModal.inventoryId) return;
 
     try {
       setIsLoading(true);
-      await deleteBankBranch(deleteModal.branchId);
-      // Remove from local state
-      setBankBranches(prev => prev.filter(branch => branch.id !== deleteModal.branchId));
-      showToast('Bank branch deleted successfully', 'success');
+      await deleteInventory(deleteModal.inventoryId);
+      setInventories(prev => prev.filter(inventory => inventory.id !== deleteModal.inventoryId));
+      showToast('Inventory deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
-      showToast('Failed to delete bank branch', 'error');
+      showToast('Failed to delete inventory', 'error');
     } finally {
       setIsLoading(false);
       setDeleteModal({ isOpen: false });
@@ -86,24 +88,18 @@ export default function BankBranchTable({
     setDeleteModal({ isOpen: false });
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    setCurrentPage(1); // Reset to first page on search
   };
 
   const handleItemsPerPageChange = (limit: number) => {
-    setPageSize(limit);
-  };
-
-  const getBankName = (bankId?: number) => {
-    if (!bankId) return "-";
-    const bank = banks.find(b => b.id === bankId);
-    return bank ? bank.name : "-";
-  };
-
-  const getBankCode = (bankId?: number) => {
-    if (!bankId) return "";
-    const bank = banks.find(b => b.id === bankId);
-    return bank ? bank.code : "";
+    setItemsPerPage(limit);
+    setCurrentPage(1); // Reset to first page when changing items per page
   };
 
   return (
@@ -111,7 +107,7 @@ export default function BankBranchTable({
       <TableControls
         onSearch={handleSearch}
         onItemsPerPageChange={handleItemsPerPageChange}
-        searchPlaceholder="Search bank branches..."
+        searchPlaceholder="Search inventories by code, name, address, contact..."
         isLoading={isLoading}
         showRefresh={false}
       />
@@ -124,19 +120,16 @@ export default function BankBranchTable({
                 Code
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bank Details
+                Inventory Details
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Branch Details
+                Address
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Contact Person
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Contact Info
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Routing No
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -147,56 +140,41 @@ export default function BankBranchTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedData.map(branch => (
-              <tr key={branch.id} className="hover:bg-gray-50">
+            {paginatedInventories.map(inventory => (
+              <tr key={inventory.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{branch.code}</div>
+                  <div className="text-sm font-medium text-gray-900">{inventory.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {getBankName(branch.bank?.id)}
+                  <div className="text-sm font-medium text-gray-900">{inventory.name}</div>
+                  {inventory.nameBn && (
+                    <div className="text-sm text-gray-500">{inventory.nameBn}</div>
+                  )}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-900 max-w-xs">
+                    {inventory.address || "-"}
                   </div>
-                  {getBankCode(branch.bank?.id) && (
-                    <div className="text-sm text-gray-500">{getBankCode(branch.bank?.id)}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{branch.name}</div>
-                  {branch.nameBn && (
-                    <div className="text-sm text-gray-500">{branch.nameBn}</div>
-                  )}
-                  {branch.address && (
-                    <div className="text-xs text-gray-400 mt-1 max-w-xs truncate">
-                      {branch.address}
-                    </div>
-                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {branch.contactPersonName || "-"}
+                    {inventory.responsiblePerson || "-"}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {branch.mobile && (
-                    <div className="text-sm text-gray-900">{branch.mobile}</div>
+                  {inventory.mobile && (
+                    <div className="text-sm text-gray-900">{inventory.mobile}</div>
                   )}
-                  {branch.email && (
-                    <div className="text-sm text-gray-500">{branch.email}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-mono text-gray-900">
-                    {branch.routingNo || "-"}
-                  </div>
+                 
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  <StatusBadge active={branch.active} />
+                  <StatusBadge active={inventory.active || false} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    itemId={branch.id}
-                    itemName={branch.name}
-                    itemType="bank-branch"
+                    itemId={inventory.id}
+                    itemName={inventory.name}
+                    itemType="inventory"
                     onDeleteClick={handleDeleteClick}
                   />
                 </td>
@@ -205,24 +183,27 @@ export default function BankBranchTable({
           </tbody>
         </table>
         
-        {paginatedData.length === 0 && (
+        {paginatedInventories.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">
-              {searchTerm ? "No matching bank branches found" : "No bank branches found"}
+              {searchTerm ? "No matching inventories found" : "No inventories found"}
             </p>
             {searchTerm ? (
               <button
-                onClick={() => setSearchTerm("")}
+                onClick={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
                 Clear search
               </button>
             ) : (
               <Link 
-                href="/bank-branches/create" 
+                href="/inventory/create" 
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
-                Add your first bank branch
+                Add your first inventory
               </Link>
             )}
           </div>
@@ -234,10 +215,10 @@ export default function BankBranchTable({
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}
-          itemsPerPage={10}
-          startIndex={startIndex}
+          itemsPerPage={itemsPerPage}
+          startIndex={startIndex + 1} // +1 because it's 1-indexed for display
           endIndex={endIndex}
-          onPageChange={setCurrentPage}
+          onPageChange={handlePageChange}
         />
       )}
 
@@ -246,8 +227,8 @@ export default function BankBranchTable({
         isOpen={deleteModal.isOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        itemName={deleteModal.branchName || "this bank branch"}
-        itemType="bank-branch"
+        itemName={deleteModal.inventoryName || "this inventory"}
+        itemType="inventory"
       />
 
       {/* Toast Notification */}

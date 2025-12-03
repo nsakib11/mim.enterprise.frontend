@@ -1,28 +1,28 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import { Bank } from "@/utils/types";
-import { deleteBank } from "@/utils/api";
+import { Unit } from "@/utils/types";
+import { deleteUnit } from "@/utils/api";
 import StatusBadge from "../StatusBadge";
 import ActionsDropdown from "../ActionsDropdown";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import Toast from "../Toast";
 import Pagination from "../Pagination";
 import TableControls from "../TableControl";
+import Link from "next/link";
 
-interface BankTableProps {
-  initialBanks: Bank[];
+interface UnitTableProps {
+  initialUnits: Unit[];
 }
 
-export default function BankTable({ initialBanks }: BankTableProps) {
-  const [banks, setBanks] = useState<Bank[]>(initialBanks);
+export default function UnitTable({ initialUnits }: UnitTableProps) {
+  const [units, setUnits] = useState<Unit[]>(initialUnits);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; bankId?: number; bankName?: string }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; unitId?: number; unitName?: string }>({
     isOpen: false,
   });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -31,52 +31,49 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     type: 'success'
   });
 
-  // Filter banks based on search term
-  const filteredBanks = useMemo(() => {
-    if (!searchTerm.trim()) return banks;
+  // Filter units based on search term
+  const filteredUnits = useMemo(() => {
+    if (!searchTerm.trim()) return units;
     
     const lowercasedSearch = searchTerm.toLowerCase();
-    return banks.filter(bank => 
-      bank.code.toLowerCase().includes(lowercasedSearch) ||
-      bank.name.toLowerCase().includes(lowercasedSearch) ||
-      (bank.nameBn && bank.nameBn.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.headOfficeAddress && bank.headOfficeAddress.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.website && bank.website.toLowerCase().includes(lowercasedSearch))
+    return units.filter(unit => 
+      unit.name.toLowerCase().includes(lowercasedSearch) ||
+      (unit.nameBn && unit.nameBn.toLowerCase().includes(lowercasedSearch))
     );
-  }, [banks, searchTerm]);
+  }, [units, searchTerm]);
 
   // Calculate pagination values
-  const totalItems = filteredBanks.length;
+  const totalItems = filteredUnits.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   // Get current page data
-  const paginatedBanks = useMemo(() => {
-    return filteredBanks.slice(startIndex, endIndex);
-  }, [filteredBanks, startIndex, endIndex]);
+  const paginatedUnits = useMemo(() => {
+    return filteredUnits.slice(startIndex, endIndex);
+  }, [filteredUnits, startIndex, endIndex]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleDeleteClick = (bankId?: number, bankName?: string) => {
-    if (!bankId) return;
-    setDeleteModal({ isOpen: true, bankId, bankName });
+  const handleDeleteClick = (unitId?: number, unitName?: string) => {
+    if (!unitId) return;
+    setDeleteModal({ isOpen: true, unitId, unitName });
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.bankId) return;
+    if (!deleteModal.unitId) return;
 
     try {
       setIsLoading(true);
-      await deleteBank(deleteModal.bankId);
-      setBanks(prev => prev.filter(bank => bank.id !== deleteModal.bankId));
-      showToast('Bank deleted successfully', 'success');
+      await deleteUnit(deleteModal.unitId);
+      setUnits(prev => prev.filter(unit => unit.id !== deleteModal.unitId));
+      showToast('Unit deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
-      showToast('Failed to delete bank', 'error');
+      showToast('Failed to delete unit', 'error');
     } finally {
       setIsLoading(false);
       setDeleteModal({ isOpen: false });
@@ -101,27 +98,12 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
-  const formatWebsite = (website: string) => {
-    if (!website) return "-";
-    const displayUrl = website.replace(/^https?:\/\//, '');
-    return (
-      <a 
-        href={website.startsWith('http') ? website : `https://${website}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-      >
-        {displayUrl}
-      </a>
-    );
-  };
-
   return (
     <>
       <TableControls
         onSearch={handleSearch}
         onItemsPerPageChange={handleItemsPerPageChange}
-        searchPlaceholder="Search banks by code, name, address..."
+        searchPlaceholder="Search units by name (English or Bangla)..."
         isLoading={isLoading}
         showRefresh={false}
       />
@@ -131,16 +113,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Code
+                Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bank Details
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Head Office Address
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Website
+                Name (Bangla)
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -151,36 +127,23 @@ export default function BankTable({ initialBanks }: BankTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedBanks.map(bank => (
-              <tr key={bank.id} className="hover:bg-gray-50">
+            {paginatedUnits.map(unit => (
+              <tr key={unit.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.code}</div>
+                  <div className="text-sm font-medium text-gray-900">{unit.name}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.name}</div>
-                  {bank.nameBn && (
-                    <div className="text-sm text-gray-500">{bank.nameBn}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 max-w-xs">
-                    {bank.headOfficeAddress || "-"}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatWebsite(bank.website || '')}
-                  </div>
+                  <div className="text-sm text-gray-900">{unit.nameBn || "-"}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  <StatusBadge active={bank.active} />
+                  <StatusBadge active={unit.active} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    itemId={bank.id} 
-                    itemName={bank.name}
-                    itemType="bank"
-                    onDeleteClick={handleDeleteClick} 
+                    itemId={unit.id}
+                    itemName={unit.name}
+                    itemType="unit"
+                    onDeleteClick={handleDeleteClick}
                   />
                 </td>
               </tr>
@@ -188,10 +151,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
           </tbody>
         </table>
         
-        {paginatedBanks.length === 0 && (
+        {paginatedUnits.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">
-              {searchTerm ? "No matching banks found" : "No banks found"}
+              {searchTerm ? "No matching units found" : "No units found"}
             </p>
             {searchTerm ? (
               <button
@@ -205,10 +168,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
               </button>
             ) : (
               <Link 
-                href="/banks/create" 
+                href="/units/create" 
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
-                Add your first bank
+                Add your first unit
               </Link>
             )}
           </div>
@@ -232,8 +195,8 @@ export default function BankTable({ initialBanks }: BankTableProps) {
         isOpen={deleteModal.isOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        itemName={deleteModal.bankName || "this bank"}
-        itemType="bank"
+        itemName={deleteModal.unitName || "this unit"}
+        itemType="unit"
       />
 
       {/* Toast Notification */}

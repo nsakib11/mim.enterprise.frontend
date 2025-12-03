@@ -6,7 +6,7 @@ export enum SupplierProduct {
 }
 
 export enum SupplierType {
-   CREDIT_PURCHASE = " CREDIT_PURCHASE",
+  CREDIT_PURCHASE = "CREDIT_PURCHASE",
   NON_CREDIT_PURCHASE = "NON_CREDIT_PURCHASE"       
 }
 export enum CustomerType {

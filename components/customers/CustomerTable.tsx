@@ -1,28 +1,28 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import { Bank } from "@/utils/types";
-import { deleteBank } from "@/utils/api";
+import { Customer, CustomerType } from "@/utils/types";
+import { deleteCustomer } from "@/utils/api";
 import StatusBadge from "../StatusBadge";
 import ActionsDropdown from "../ActionsDropdown";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import Toast from "../Toast";
 import Pagination from "../Pagination";
 import TableControls from "../TableControl";
+import Link from "next/link";
 
-interface BankTableProps {
-  initialBanks: Bank[];
+interface CustomerTableProps {
+  initialCustomers: Customer[];
 }
 
-export default function BankTable({ initialBanks }: BankTableProps) {
-  const [banks, setBanks] = useState<Bank[]>(initialBanks);
+export default function CustomerTable({ initialCustomers }: CustomerTableProps) {
+  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; bankId?: number; bankName?: string }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; customerId?: number; customerName?: string }>({
     isOpen: false,
   });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -31,52 +31,54 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     type: 'success'
   });
 
-  // Filter banks based on search term
-  const filteredBanks = useMemo(() => {
-    if (!searchTerm.trim()) return banks;
+  // Filter customers based on search term
+  const filteredCustomers = useMemo(() => {
+    if (!searchTerm.trim()) return customers;
     
     const lowercasedSearch = searchTerm.toLowerCase();
-    return banks.filter(bank => 
-      bank.code.toLowerCase().includes(lowercasedSearch) ||
-      bank.name.toLowerCase().includes(lowercasedSearch) ||
-      (bank.nameBn && bank.nameBn.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.headOfficeAddress && bank.headOfficeAddress.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.website && bank.website.toLowerCase().includes(lowercasedSearch))
+    return customers.filter(customer => 
+      customer.code.toLowerCase().includes(lowercasedSearch) ||
+      customer.name.toLowerCase().includes(lowercasedSearch) ||
+      (customer.nameBn && customer.nameBn.toLowerCase().includes(lowercasedSearch)) ||
+      customer.mobile.toLowerCase().includes(lowercasedSearch) ||
+      (customer.email && customer.email.toLowerCase().includes(lowercasedSearch)) ||
+      (customer.address && customer.address.toLowerCase().includes(lowercasedSearch)) ||
+      customer.customerType.toLowerCase().includes(lowercasedSearch)
     );
-  }, [banks, searchTerm]);
+  }, [customers, searchTerm]);
 
   // Calculate pagination values
-  const totalItems = filteredBanks.length;
+  const totalItems = filteredCustomers.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   // Get current page data
-  const paginatedBanks = useMemo(() => {
-    return filteredBanks.slice(startIndex, endIndex);
-  }, [filteredBanks, startIndex, endIndex]);
+  const paginatedCustomers = useMemo(() => {
+    return filteredCustomers.slice(startIndex, endIndex);
+  }, [filteredCustomers, startIndex, endIndex]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleDeleteClick = (bankId?: number, bankName?: string) => {
-    if (!bankId) return;
-    setDeleteModal({ isOpen: true, bankId, bankName });
+  const handleDeleteClick = (customerId?: number, customerName?: string) => {
+    if (!customerId) return;
+    setDeleteModal({ isOpen: true, customerId, customerName });
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.bankId) return;
+    if (!deleteModal.customerId) return;
 
     try {
       setIsLoading(true);
-      await deleteBank(deleteModal.bankId);
-      setBanks(prev => prev.filter(bank => bank.id !== deleteModal.bankId));
-      showToast('Bank deleted successfully', 'success');
+      await deleteCustomer(deleteModal.customerId);
+      setCustomers(prev => prev.filter(customer => customer.id !== deleteModal.customerId));
+      showToast('Customer deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
-      showToast('Failed to delete bank', 'error');
+      showToast('Failed to delete customer', 'error');
     } finally {
       setIsLoading(false);
       setDeleteModal({ isOpen: false });
@@ -101,18 +103,18 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
-  const formatWebsite = (website: string) => {
-    if (!website) return "-";
-    const displayUrl = website.replace(/^https?:\/\//, '');
+  const getTypeBadge = (type: CustomerType) => {
+    const typeColors = {
+      [CustomerType.INDIVIDUAL]: "bg-blue-100 text-blue-800",
+      [CustomerType.PARTY]: "bg-purple-100 text-purple-800"
+    };
+    
+    const colorClass = typeColors[type] || "bg-gray-100 text-gray-800";
+    
     return (
-      <a 
-        href={website.startsWith('http') ? website : `https://${website}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-      >
-        {displayUrl}
-      </a>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+        {type}
+      </span>
     );
   };
 
@@ -121,7 +123,7 @@ export default function BankTable({ initialBanks }: BankTableProps) {
       <TableControls
         onSearch={handleSearch}
         onItemsPerPageChange={handleItemsPerPageChange}
-        searchPlaceholder="Search banks by code, name, address..."
+        searchPlaceholder="Search customers by code, name, mobile, email..."
         isLoading={isLoading}
         showRefresh={false}
       />
@@ -134,13 +136,16 @@ export default function BankTable({ initialBanks }: BankTableProps) {
                 Code
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bank Details
+                Customer Details
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Head Office Address
+                Contact Info
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Website
+                Address
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -151,36 +156,40 @@ export default function BankTable({ initialBanks }: BankTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedBanks.map(bank => (
-              <tr key={bank.id} className="hover:bg-gray-50">
+            {paginatedCustomers.map(customer => (
+              <tr key={customer.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.code}</div>
+                  <div className="text-sm font-medium text-gray-900">{customer.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.name}</div>
-                  {bank.nameBn && (
-                    <div className="text-sm text-gray-500">{bank.nameBn}</div>
+                  <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                  {customer.nameBn && (
+                    <div className="text-sm text-gray-500">{customer.nameBn}</div>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                  {getTypeBadge(customer.customerType)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{customer.mobile}</div>
+                  {customer.email && (
+                    <div className="text-sm text-gray-500">{customer.email}</div>
                   )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 max-w-xs">
-                    {bank.headOfficeAddress || "-"}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatWebsite(bank.website || '')}
+                    {customer.address || "-"}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  <StatusBadge active={bank.active} />
+                  <StatusBadge active={customer.active} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    itemId={bank.id} 
-                    itemName={bank.name}
-                    itemType="bank"
-                    onDeleteClick={handleDeleteClick} 
+                    itemId={customer.id}
+                    itemName={customer.name}
+                    itemType="customer"
+                    onDeleteClick={handleDeleteClick}
                   />
                 </td>
               </tr>
@@ -188,10 +197,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
           </tbody>
         </table>
         
-        {paginatedBanks.length === 0 && (
+        {paginatedCustomers.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">
-              {searchTerm ? "No matching banks found" : "No banks found"}
+              {searchTerm ? "No matching customers found" : "No customers found"}
             </p>
             {searchTerm ? (
               <button
@@ -205,10 +214,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
               </button>
             ) : (
               <Link 
-                href="/banks/create" 
+                href="/customers/create" 
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
-                Add your first bank
+                Add your first customer
               </Link>
             )}
           </div>
@@ -232,8 +241,8 @@ export default function BankTable({ initialBanks }: BankTableProps) {
         isOpen={deleteModal.isOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        itemName={deleteModal.bankName || "this bank"}
-        itemType="bank"
+        itemName={deleteModal.customerName || "this customer"}
+        itemType="customer"
       />
 
       {/* Toast Notification */}

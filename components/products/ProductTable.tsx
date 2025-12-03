@@ -1,28 +1,28 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import { Bank } from "@/utils/types";
-import { deleteBank } from "@/utils/api";
+import { Product } from "@/utils/types";
+import { deleteProduct } from "@/utils/api";
 import StatusBadge from "../StatusBadge";
 import ActionsDropdown from "../ActionsDropdown";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import Toast from "../Toast";
 import Pagination from "../Pagination";
 import TableControls from "../TableControl";
+import Link from "next/link";
 
-interface BankTableProps {
-  initialBanks: Bank[];
+interface ProductTableProps {
+  initialProducts: Product[];
 }
 
-export default function BankTable({ initialBanks }: BankTableProps) {
-  const [banks, setBanks] = useState<Bank[]>(initialBanks);
+export default function ProductTable({ initialProducts }: ProductTableProps) {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; bankId?: number; bankName?: string }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; productId?: number; productName?: string }>({
     isOpen: false,
   });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -31,52 +31,55 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     type: 'success'
   });
 
-  // Filter banks based on search term
-  const filteredBanks = useMemo(() => {
-    if (!searchTerm.trim()) return banks;
+  // Filter products based on search term
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return products;
     
     const lowercasedSearch = searchTerm.toLowerCase();
-    return banks.filter(bank => 
-      bank.code.toLowerCase().includes(lowercasedSearch) ||
-      bank.name.toLowerCase().includes(lowercasedSearch) ||
-      (bank.nameBn && bank.nameBn.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.headOfficeAddress && bank.headOfficeAddress.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.website && bank.website.toLowerCase().includes(lowercasedSearch))
+    return products.filter(product => 
+      product.code.toLowerCase().includes(lowercasedSearch) ||
+      product.name.toLowerCase().includes(lowercasedSearch) ||
+      (product.nameBn && product.nameBn.toLowerCase().includes(lowercasedSearch)) ||
+      (product.category && product.category.toLowerCase().includes(lowercasedSearch)) ||
+      (product.supplier?.name && product.supplier.name.toLowerCase().includes(lowercasedSearch)) ||
+      (product.supplier?.code && product.supplier.code.toLowerCase().includes(lowercasedSearch)) ||
+      (product.unit?.name && product.unit.name.toLowerCase().includes(lowercasedSearch)) ||
+      (product.unit?.nameBn && product.unit.nameBn.toLowerCase().includes(lowercasedSearch))
     );
-  }, [banks, searchTerm]);
+  }, [products, searchTerm]);
 
   // Calculate pagination values
-  const totalItems = filteredBanks.length;
+  const totalItems = filteredProducts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   // Get current page data
-  const paginatedBanks = useMemo(() => {
-    return filteredBanks.slice(startIndex, endIndex);
-  }, [filteredBanks, startIndex, endIndex]);
+  const paginatedProducts = useMemo(() => {
+    return filteredProducts.slice(startIndex, endIndex);
+  }, [filteredProducts, startIndex, endIndex]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleDeleteClick = (bankId?: number, bankName?: string) => {
-    if (!bankId) return;
-    setDeleteModal({ isOpen: true, bankId, bankName });
+  const handleDeleteClick = (productId?: number, productName?: string) => {
+    if (!productId) return;
+    setDeleteModal({ isOpen: true, productId, productName });
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.bankId) return;
+    if (!deleteModal.productId) return;
 
     try {
       setIsLoading(true);
-      await deleteBank(deleteModal.bankId);
-      setBanks(prev => prev.filter(bank => bank.id !== deleteModal.bankId));
-      showToast('Bank deleted successfully', 'success');
+      await deleteProduct(deleteModal.productId);
+      setProducts(prev => prev.filter(product => product.id !== deleteModal.productId));
+      showToast('Product deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
-      showToast('Failed to delete bank', 'error');
+      showToast('Failed to delete product', 'error');
     } finally {
       setIsLoading(false);
       setDeleteModal({ isOpen: false });
@@ -101,18 +104,23 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
-  const formatWebsite = (website: string) => {
-    if (!website) return "-";
-    const displayUrl = website.replace(/^https?:\/\//, '');
+  const getCategoryBadge = (category?: string) => {
+    if (!category) return "-";
+    
+    const categoryColors = {
+      "Building Material": "bg-blue-100 text-blue-800",
+      "Hardware": "bg-orange-100 text-orange-800",
+      "Board": "bg-green-100 text-green-800",
+      "Electrical": "bg-purple-100 text-purple-800",
+      "Plumbing": "bg-cyan-100 text-cyan-800"
+    };
+    
+    const colorClass = categoryColors[category as keyof typeof categoryColors] || "bg-gray-100 text-gray-800";
+    
     return (
-      <a 
-        href={website.startsWith('http') ? website : `https://${website}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-      >
-        {displayUrl}
-      </a>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+        {category}
+      </span>
     );
   };
 
@@ -121,7 +129,7 @@ export default function BankTable({ initialBanks }: BankTableProps) {
       <TableControls
         onSearch={handleSearch}
         onItemsPerPageChange={handleItemsPerPageChange}
-        searchPlaceholder="Search banks by code, name, address..."
+        searchPlaceholder="Search products by code, name, category, supplier..."
         isLoading={isLoading}
         showRefresh={false}
       />
@@ -134,13 +142,16 @@ export default function BankTable({ initialBanks }: BankTableProps) {
                 Code
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bank Details
+                Product Details
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Head Office Address
+                Category
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Website
+                Supplier
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Unit
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -151,36 +162,45 @@ export default function BankTable({ initialBanks }: BankTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedBanks.map(bank => (
-              <tr key={bank.id} className="hover:bg-gray-50">
+            {paginatedProducts.map(product => (
+              <tr key={product.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.code}</div>
+                  <div className="text-sm font-medium text-gray-900">{product.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.name}</div>
-                  {bank.nameBn && (
-                    <div className="text-sm text-gray-500">{bank.nameBn}</div>
+                  <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                  {product.nameBn && (
+                    <div className="text-sm text-gray-500">{product.nameBn}</div>
                   )}
                 </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 max-w-xs">
-                    {bank.headOfficeAddress || "-"}
-                  </div>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {getCategoryBadge(product.category)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {formatWebsite(bank.website || '')}
+                    {product.supplier?.name || "-"}
                   </div>
+                  {product.supplier?.code && (
+                    <div className="text-sm text-gray-500">{product.supplier.code}</div>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {product.unit?.name || "-"}
+                  </div>
+                  {product.unit?.nameBn && (
+                    <div className="text-sm text-gray-500">{product.unit.nameBn}</div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  <StatusBadge active={bank.active} />
+                  <StatusBadge active={product.active || false} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    itemId={bank.id} 
-                    itemName={bank.name}
-                    itemType="bank"
-                    onDeleteClick={handleDeleteClick} 
+                    itemId={product.id}
+                    itemName={product.name}
+                    itemType="product"
+                    onDeleteClick={handleDeleteClick}
                   />
                 </td>
               </tr>
@@ -188,10 +208,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
           </tbody>
         </table>
         
-        {paginatedBanks.length === 0 && (
+        {paginatedProducts.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">
-              {searchTerm ? "No matching banks found" : "No banks found"}
+              {searchTerm ? "No matching products found" : "No products found"}
             </p>
             {searchTerm ? (
               <button
@@ -205,10 +225,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
               </button>
             ) : (
               <Link 
-                href="/banks/create" 
+                href="/products/create" 
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
-                Add your first bank
+                Add your first product
               </Link>
             )}
           </div>
@@ -232,8 +252,8 @@ export default function BankTable({ initialBanks }: BankTableProps) {
         isOpen={deleteModal.isOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        itemName={deleteModal.bankName || "this bank"}
-        itemType="bank"
+        itemName={deleteModal.productName || "this product"}
+        itemType="product"
       />
 
       {/* Toast Notification */}

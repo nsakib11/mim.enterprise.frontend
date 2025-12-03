@@ -1,28 +1,28 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import { Bank } from "@/utils/types";
-import { deleteBank } from "@/utils/api";
+import { Shop } from "@/utils/types";
+import { deleteShop } from "@/utils/api";
 import StatusBadge from "../StatusBadge";
 import ActionsDropdown from "../ActionsDropdown";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import Toast from "../Toast";
 import Pagination from "../Pagination";
 import TableControls from "../TableControl";
+import Link from "next/link";
 
-interface BankTableProps {
-  initialBanks: Bank[];
+interface ShopTableProps {
+  initialShops: Shop[];
 }
 
-export default function BankTable({ initialBanks }: BankTableProps) {
-  const [banks, setBanks] = useState<Bank[]>(initialBanks);
+export default function ShopTable({ initialShops }: ShopTableProps) {
+  const [shops, setShops] = useState<Shop[]>(initialShops);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; bankId?: number; bankName?: string }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; shopId?: number; shopName?: string }>({
     isOpen: false,
   });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -31,52 +31,51 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     type: 'success'
   });
 
-  // Filter banks based on search term
-  const filteredBanks = useMemo(() => {
-    if (!searchTerm.trim()) return banks;
+  // Filter shops based on search term
+  const filteredShops = useMemo(() => {
+    if (!searchTerm.trim()) return shops;
     
     const lowercasedSearch = searchTerm.toLowerCase();
-    return banks.filter(bank => 
-      bank.code.toLowerCase().includes(lowercasedSearch) ||
-      bank.name.toLowerCase().includes(lowercasedSearch) ||
-      (bank.nameBn && bank.nameBn.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.headOfficeAddress && bank.headOfficeAddress.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.website && bank.website.toLowerCase().includes(lowercasedSearch))
+    return shops.filter(shop => 
+      shop.code.toLowerCase().includes(lowercasedSearch) ||
+      shop.name.toLowerCase().includes(lowercasedSearch) ||
+      (shop.nameBn && shop.nameBn.toLowerCase().includes(lowercasedSearch)) ||
+      (shop.address && shop.address.toLowerCase().includes(lowercasedSearch))
     );
-  }, [banks, searchTerm]);
+  }, [shops, searchTerm]);
 
   // Calculate pagination values
-  const totalItems = filteredBanks.length;
+  const totalItems = filteredShops.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   // Get current page data
-  const paginatedBanks = useMemo(() => {
-    return filteredBanks.slice(startIndex, endIndex);
-  }, [filteredBanks, startIndex, endIndex]);
+  const paginatedShops = useMemo(() => {
+    return filteredShops.slice(startIndex, endIndex);
+  }, [filteredShops, startIndex, endIndex]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleDeleteClick = (bankId?: number, bankName?: string) => {
-    if (!bankId) return;
-    setDeleteModal({ isOpen: true, bankId, bankName });
+  const handleDeleteClick = (shopId?: number, shopName?: string) => {
+    if (!shopId) return;
+    setDeleteModal({ isOpen: true, shopId, shopName });
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.bankId) return;
+    if (!deleteModal.shopId) return;
 
     try {
       setIsLoading(true);
-      await deleteBank(deleteModal.bankId);
-      setBanks(prev => prev.filter(bank => bank.id !== deleteModal.bankId));
-      showToast('Bank deleted successfully', 'success');
+      await deleteShop(deleteModal.shopId);
+      setShops(prev => prev.filter(shop => shop.id !== deleteModal.shopId));
+      showToast('Shop deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
-      showToast('Failed to delete bank', 'error');
+      showToast('Failed to delete shop', 'error');
     } finally {
       setIsLoading(false);
       setDeleteModal({ isOpen: false });
@@ -101,27 +100,39 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
-  const formatWebsite = (website: string) => {
-    if (!website) return "-";
-    const displayUrl = website.replace(/^https?:\/\//, '');
-    return (
-      <a 
-        href={website.startsWith('http') ? website : `https://${website}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-      >
-        {displayUrl}
-      </a>
-    );
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return "-";
+    return new Intl.NumberFormat('en-BD', {
+      style: 'currency',
+      currency: 'BDT',
+      minimumFractionDigits: 2,
+    }).format(amount);
   };
+
+  const calculateTargetMetrics = () => {
+    const totalMonthlyTarget = shops.reduce((sum, shop) => sum + (shop.monthlySalesTarget || 0), 0);
+    const totalYearlyTarget = shops.reduce((sum, shop) => sum + (shop.yearlySalesTarget || 0), 0);
+    const averageMonthlyTarget = shops.length > 0 ? totalMonthlyTarget / shops.length : 0;
+    const averageYearlyTarget = shops.length > 0 ? totalYearlyTarget / shops.length : 0;
+    const shopsWithTargets = shops.filter(shop => shop.monthlySalesTarget || shop.yearlySalesTarget).length;
+    
+    return {
+      totalMonthlyTarget,
+      totalYearlyTarget,
+      averageMonthlyTarget,
+      averageYearlyTarget,
+      shopsWithTargets
+    };
+  };
+
+  const targetMetrics = calculateTargetMetrics();
 
   return (
     <>
       <TableControls
         onSearch={handleSearch}
         onItemsPerPageChange={handleItemsPerPageChange}
-        searchPlaceholder="Search banks by code, name, address..."
+        searchPlaceholder="Search shops by code, name, address..."
         isLoading={isLoading}
         showRefresh={false}
       />
@@ -134,13 +145,16 @@ export default function BankTable({ initialBanks }: BankTableProps) {
                 Code
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bank Details
+                Shop Details
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Head Office Address
+                Address
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Website
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Monthly Target
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Yearly Target
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -151,36 +165,41 @@ export default function BankTable({ initialBanks }: BankTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedBanks.map(bank => (
-              <tr key={bank.id} className="hover:bg-gray-50">
+            {paginatedShops.map(shop => (
+              <tr key={shop.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.code}</div>
+                  <div className="text-sm font-medium text-gray-900">{shop.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.name}</div>
-                  {bank.nameBn && (
-                    <div className="text-sm text-gray-500">{bank.nameBn}</div>
+                  <div className="text-sm font-medium text-gray-900">{shop.name}</div>
+                  {shop.nameBn && (
+                    <div className="text-sm text-gray-500">{shop.nameBn}</div>
                   )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 max-w-xs">
-                    {bank.headOfficeAddress || "-"}
+                    {shop.address || "-"}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatWebsite(bank.website || '')}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                  <div className={`font-medium ${shop.monthlySalesTarget ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {formatCurrency(shop.monthlySalesTarget)}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                  <div className={`font-medium ${shop.yearlySalesTarget ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {formatCurrency(shop.yearlySalesTarget)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  <StatusBadge active={bank.active} />
+                  <StatusBadge active={shop.active || false} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    itemId={bank.id} 
-                    itemName={bank.name}
-                    itemType="bank"
-                    onDeleteClick={handleDeleteClick} 
+                    itemId={shop.id}
+                    itemName={shop.name}
+                    itemType="shop"
+                    onDeleteClick={handleDeleteClick}
                   />
                 </td>
               </tr>
@@ -188,10 +207,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
           </tbody>
         </table>
         
-        {paginatedBanks.length === 0 && (
+        {paginatedShops.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">
-              {searchTerm ? "No matching banks found" : "No banks found"}
+              {searchTerm ? "No matching shops found" : "No shops found"}
             </p>
             {searchTerm ? (
               <button
@@ -205,10 +224,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
               </button>
             ) : (
               <Link 
-                href="/banks/create" 
+                href="/shops/create" 
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
-                Add your first bank
+                Add your first shop
               </Link>
             )}
           </div>
@@ -232,8 +251,8 @@ export default function BankTable({ initialBanks }: BankTableProps) {
         isOpen={deleteModal.isOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        itemName={deleteModal.bankName || "this bank"}
-        itemType="bank"
+        itemName={deleteModal.shopName || "this shop"}
+        itemType="shop"
       />
 
       {/* Toast Notification */}

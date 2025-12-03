@@ -1,28 +1,28 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import { Bank } from "@/utils/types";
-import { deleteBank } from "@/utils/api";
+import { CostCenter, CostCenterType } from "@/utils/types";
+import { deleteCostCenter } from "@/utils/api";
 import StatusBadge from "../StatusBadge";
 import ActionsDropdown from "../ActionsDropdown";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import Toast from "../Toast";
 import Pagination from "../Pagination";
 import TableControls from "../TableControl";
+import Link from "next/link";
 
-interface BankTableProps {
-  initialBanks: Bank[];
+interface CostCenterTableProps {
+  initialCostCenters: CostCenter[];
 }
 
-export default function BankTable({ initialBanks }: BankTableProps) {
-  const [banks, setBanks] = useState<Bank[]>(initialBanks);
+export default function CostCenterTable({ initialCostCenters }: CostCenterTableProps) {
+  const [costCenters, setCostCenters] = useState<CostCenter[]>(initialCostCenters);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; bankId?: number; bankName?: string }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; costCenterId?: number; costCenterName?: string }>({
     isOpen: false,
   });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -31,52 +31,51 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     type: 'success'
   });
 
-  // Filter banks based on search term
-  const filteredBanks = useMemo(() => {
-    if (!searchTerm.trim()) return banks;
+  // Filter cost centers based on search term
+  const filteredCostCenters = useMemo(() => {
+    if (!searchTerm.trim()) return costCenters;
     
     const lowercasedSearch = searchTerm.toLowerCase();
-    return banks.filter(bank => 
-      bank.code.toLowerCase().includes(lowercasedSearch) ||
-      bank.name.toLowerCase().includes(lowercasedSearch) ||
-      (bank.nameBn && bank.nameBn.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.headOfficeAddress && bank.headOfficeAddress.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.website && bank.website.toLowerCase().includes(lowercasedSearch))
+    return costCenters.filter(cc => 
+      cc.code.toLowerCase().includes(lowercasedSearch) ||
+      cc.name.toLowerCase().includes(lowercasedSearch) ||
+      (cc.nameBn && cc.nameBn.toLowerCase().includes(lowercasedSearch)) ||
+      cc.costCenterType.toLowerCase().includes(lowercasedSearch)
     );
-  }, [banks, searchTerm]);
+  }, [costCenters, searchTerm]);
 
   // Calculate pagination values
-  const totalItems = filteredBanks.length;
+  const totalItems = filteredCostCenters.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   // Get current page data
-  const paginatedBanks = useMemo(() => {
-    return filteredBanks.slice(startIndex, endIndex);
-  }, [filteredBanks, startIndex, endIndex]);
+  const paginatedCostCenters = useMemo(() => {
+    return filteredCostCenters.slice(startIndex, endIndex);
+  }, [filteredCostCenters, startIndex, endIndex]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleDeleteClick = (bankId?: number, bankName?: string) => {
-    if (!bankId) return;
-    setDeleteModal({ isOpen: true, bankId, bankName });
+  const handleDeleteClick = (costCenterId?: number, costCenterName?: string) => {
+    if (!costCenterId) return;
+    setDeleteModal({ isOpen: true, costCenterId, costCenterName });
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.bankId) return;
+    if (!deleteModal.costCenterId) return;
 
     try {
       setIsLoading(true);
-      await deleteBank(deleteModal.bankId);
-      setBanks(prev => prev.filter(bank => bank.id !== deleteModal.bankId));
-      showToast('Bank deleted successfully', 'success');
+      await deleteCostCenter(deleteModal.costCenterId);
+      setCostCenters(prev => prev.filter(cc => cc.id !== deleteModal.costCenterId));
+      showToast('Cost center deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
-      showToast('Failed to delete bank', 'error');
+      showToast('Failed to delete cost center', 'error');
     } finally {
       setIsLoading(false);
       setDeleteModal({ isOpen: false });
@@ -101,18 +100,20 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
-  const formatWebsite = (website: string) => {
-    if (!website) return "-";
-    const displayUrl = website.replace(/^https?:\/\//, '');
+  const getTypeBadge = (type: CostCenterType) => {
+    const typeColors = {
+      [CostCenterType.SHOP]: "bg-blue-100 text-blue-800",
+      [CostCenterType.OFFICE]: "bg-purple-100 text-purple-800",
+      [CostCenterType.INVENTORY]: "bg-orange-100 text-orange-800",
+      [CostCenterType.GENERAL]: "bg-gray-100 text-gray-800"
+    };
+    
+    const colorClass = typeColors[type] || "bg-gray-100 text-gray-800";
+    
     return (
-      <a 
-        href={website.startsWith('http') ? website : `https://${website}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-      >
-        {displayUrl}
-      </a>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+        {type}
+      </span>
     );
   };
 
@@ -121,7 +122,7 @@ export default function BankTable({ initialBanks }: BankTableProps) {
       <TableControls
         onSearch={handleSearch}
         onItemsPerPageChange={handleItemsPerPageChange}
-        searchPlaceholder="Search banks by code, name, address..."
+        searchPlaceholder="Search cost centers by code, name, type..."
         isLoading={isLoading}
         showRefresh={false}
       />
@@ -134,13 +135,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
                 Code
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bank Details
+                Cost Center Details
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Head Office Address
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Website
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Type
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -151,36 +149,29 @@ export default function BankTable({ initialBanks }: BankTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedBanks.map(bank => (
-              <tr key={bank.id} className="hover:bg-gray-50">
+            {paginatedCostCenters.map(cc => (
+              <tr key={cc.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.code}</div>
+                  <div className="text-sm font-medium text-gray-900">{cc.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.name}</div>
-                  {bank.nameBn && (
-                    <div className="text-sm text-gray-500">{bank.nameBn}</div>
+                  <div className="text-sm font-medium text-gray-900">{cc.name}</div>
+                  {cc.nameBn && (
+                    <div className="text-sm text-gray-500">{cc.nameBn}</div>
                   )}
                 </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 max-w-xs">
-                    {bank.headOfficeAddress || "-"}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatWebsite(bank.website || '')}
-                  </div>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                  {getTypeBadge(cc.costCenterType)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  <StatusBadge active={bank.active} />
+                  <StatusBadge active={cc.active} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    itemId={bank.id} 
-                    itemName={bank.name}
-                    itemType="bank"
-                    onDeleteClick={handleDeleteClick} 
+                    itemId={cc.id}
+                    itemName={cc.name}
+                    itemType="cost-center"
+                    onDeleteClick={handleDeleteClick}
                   />
                 </td>
               </tr>
@@ -188,10 +179,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
           </tbody>
         </table>
         
-        {paginatedBanks.length === 0 && (
+        {paginatedCostCenters.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">
-              {searchTerm ? "No matching banks found" : "No banks found"}
+              {searchTerm ? "No matching cost centers found" : "No cost centers found"}
             </p>
             {searchTerm ? (
               <button
@@ -205,10 +196,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
               </button>
             ) : (
               <Link 
-                href="/banks/create" 
+                href="/cost-center/create" 
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
-                Add your first bank
+                Add your first cost center
               </Link>
             )}
           </div>
@@ -232,8 +223,8 @@ export default function BankTable({ initialBanks }: BankTableProps) {
         isOpen={deleteModal.isOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        itemName={deleteModal.bankName || "this bank"}
-        itemType="bank"
+        itemName={deleteModal.costCenterName || "this cost center"}
+        itemType="cost-center"
       />
 
       {/* Toast Notification */}

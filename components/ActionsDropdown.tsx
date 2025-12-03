@@ -87,7 +87,7 @@ import { MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
 interface ActionsDropdownProps {
   itemId?: number;
   itemName?: string;
-  itemType: "bank" | "bank-branch" | "user" | "customer" | "account"; // Add more types as needed
+  itemType: "bank" | "bank-branch" | "cost-center" | "customer" | "employee"| "inventory"| "product"| "purchase"|"sale"|"shop"|"supplier"|"unit"; // Add more types as needed
   onDeleteClick: (id?: number, name?: string) => void;
   customViewPath?: string; // Optional custom path for view
   customEditPath?: string; // Optional custom path for edit
@@ -124,12 +124,26 @@ export default function ActionsDropdown({
         return "/banks";
       case "bank-branch":
         return "/bank-branches";
-      case "user":
-        return "/users";
+      case "cost-center":
+        return "/cost-center";
       case "customer":
         return "/customers";
-      case "account":
-        return "/accounts";
+      case "employee":
+        return "/employees";
+        case "inventory":
+        return "/inventory";
+         case "product":
+      return "/products";
+      case "purchase":
+      return "/purchases";
+       case "sale":
+      return "/sales";
+       case "shop":
+      return "/shops";
+      case "supplier":
+      return "/suppliers";
+        case "unit":
+      return "/units";
       default:
         return `/${itemType}s`;
     }
@@ -156,12 +170,26 @@ export default function ActionsDropdown({
         return "Bank Branch";
       case "bank":
         return "Bank";
-      case "user":
+      case "cost-center":
         return "User";
       case "customer":
         return "Customer";
-      case "account":
-        return "Account";
+      case "employee":
+        return "Employee";
+        case "inventory":
+        return "Inventory";
+         case "product":
+      return "Products";
+      case "purchase":
+      return "Purchases";
+       case "sale":
+      return "Sales";
+       case "shop":
+      return "Shops";
+      case "supplier":
+      return "Supplier";
+        case "unit":
+      return "Units";
       default:
         return "Item";
     }

@@ -1,28 +1,28 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import { Bank } from "@/utils/types";
-import { deleteBank } from "@/utils/api";
+import { Supplier } from "@/utils/types";
+import { deleteSupplier } from "@/utils/api";
 import StatusBadge from "../StatusBadge";
 import ActionsDropdown from "../ActionsDropdown";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import Toast from "../Toast";
 import Pagination from "../Pagination";
 import TableControls from "../TableControl";
+import Link from "next/link";
 
-interface BankTableProps {
-  initialBanks: Bank[];
+interface SupplierTableProps {
+  initialSuppliers: Supplier[];
 }
 
-export default function BankTable({ initialBanks }: BankTableProps) {
-  const [banks, setBanks] = useState<Bank[]>(initialBanks);
+export default function SupplierTable({ initialSuppliers }: SupplierTableProps) {
+  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; bankId?: number; bankName?: string }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; supplierId?: number; supplierName?: string }>({
     isOpen: false,
   });
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -31,52 +31,55 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     type: 'success'
   });
 
-  // Filter banks based on search term
-  const filteredBanks = useMemo(() => {
-    if (!searchTerm.trim()) return banks;
+  // Filter suppliers based on search term
+  const filteredSuppliers = useMemo(() => {
+    if (!searchTerm.trim()) return suppliers;
     
     const lowercasedSearch = searchTerm.toLowerCase();
-    return banks.filter(bank => 
-      bank.code.toLowerCase().includes(lowercasedSearch) ||
-      bank.name.toLowerCase().includes(lowercasedSearch) ||
-      (bank.nameBn && bank.nameBn.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.headOfficeAddress && bank.headOfficeAddress.toLowerCase().includes(lowercasedSearch)) ||
-      (bank.website && bank.website.toLowerCase().includes(lowercasedSearch))
+    return suppliers.filter(supplier => 
+      supplier.code.toLowerCase().includes(lowercasedSearch) ||
+      supplier.name.toLowerCase().includes(lowercasedSearch) ||
+      (supplier.nameBn && supplier.nameBn.toLowerCase().includes(lowercasedSearch)) ||
+      supplier.supplierProduct.toLowerCase().includes(lowercasedSearch) ||
+      supplier.supplierType.toLowerCase().includes(lowercasedSearch) ||
+      supplier.responsiblePerson.toLowerCase().includes(lowercasedSearch) ||
+      supplier.mobile.toLowerCase().includes(lowercasedSearch) ||
+      (supplier.telephone && supplier.telephone.toLowerCase().includes(lowercasedSearch))
     );
-  }, [banks, searchTerm]);
+  }, [suppliers, searchTerm]);
 
   // Calculate pagination values
-  const totalItems = filteredBanks.length;
+  const totalItems = filteredSuppliers.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   // Get current page data
-  const paginatedBanks = useMemo(() => {
-    return filteredBanks.slice(startIndex, endIndex);
-  }, [filteredBanks, startIndex, endIndex]);
+  const paginatedSuppliers = useMemo(() => {
+    return filteredSuppliers.slice(startIndex, endIndex);
+  }, [filteredSuppliers, startIndex, endIndex]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const handleDeleteClick = (bankId?: number, bankName?: string) => {
-    if (!bankId) return;
-    setDeleteModal({ isOpen: true, bankId, bankName });
+  const handleDeleteClick = (supplierId?: number, supplierName?: string) => {
+    if (!supplierId) return;
+    setDeleteModal({ isOpen: true, supplierId, supplierName });
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteModal.bankId) return;
+    if (!deleteModal.supplierId) return;
 
     try {
       setIsLoading(true);
-      await deleteBank(deleteModal.bankId);
-      setBanks(prev => prev.filter(bank => bank.id !== deleteModal.bankId));
-      showToast('Bank deleted successfully', 'success');
+      await deleteSupplier(deleteModal.supplierId);
+      setSuppliers(prev => prev.filter(supplier => supplier.id !== deleteModal.supplierId));
+      showToast('Supplier deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
-      showToast('Failed to delete bank', 'error');
+      showToast('Failed to delete supplier', 'error');
     } finally {
       setIsLoading(false);
       setDeleteModal({ isOpen: false });
@@ -101,18 +104,34 @@ export default function BankTable({ initialBanks }: BankTableProps) {
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
-  const formatWebsite = (website: string) => {
-    if (!website) return "-";
-    const displayUrl = website.replace(/^https?:\/\//, '');
+  const getTypeBadge = (type: string) => {
+    const typeColors = {
+      "CREDIT_PURCHASE": "bg-blue-100 text-blue-800",
+      "NON_CREDIT_PURCHASE": "bg-purple-100 text-purple-800"
+    };
+    
+    const colorClass = typeColors[type as keyof typeof typeColors] || "bg-gray-100 text-gray-800";
+    
     return (
-      <a 
-        href={website.startsWith('http') ? website : `https://${website}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-      >
-        {displayUrl}
-      </a>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+        {type.replace(/_/g, ' ')}
+      </span>
+    );
+  };
+
+  const getProductBadge = (product: string) => {
+    const productColors = {
+      "BOARD": "bg-orange-100 text-orange-800",
+      "HARDWARE": "bg-cyan-100 text-cyan-800",
+      "BOARD_HARDWARE": "bg-indigo-100 text-indigo-800"
+    };
+    
+    const colorClass = productColors[product as keyof typeof productColors] || "bg-gray-100 text-gray-800";
+    
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+        {product.replace(/_/g, ' ')}
+      </span>
     );
   };
 
@@ -121,7 +140,7 @@ export default function BankTable({ initialBanks }: BankTableProps) {
       <TableControls
         onSearch={handleSearch}
         onItemsPerPageChange={handleItemsPerPageChange}
-        searchPlaceholder="Search banks by code, name, address..."
+        searchPlaceholder="Search suppliers by code, name, contact, product type..."
         isLoading={isLoading}
         showRefresh={false}
       />
@@ -134,13 +153,19 @@ export default function BankTable({ initialBanks }: BankTableProps) {
                 Code
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bank Details
+                Name
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Product Type
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Supplier Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Head Office Address
+                Contact Person
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Website
+                Mobile
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -151,36 +176,41 @@ export default function BankTable({ initialBanks }: BankTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedBanks.map(bank => (
-              <tr key={bank.id} className="hover:bg-gray-50">
+            {paginatedSuppliers.map(supplier => (
+              <tr key={supplier.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.code}</div>
+                  <div className="text-sm font-medium text-gray-900">{supplier.code}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{bank.name}</div>
-                  {bank.nameBn && (
-                    <div className="text-sm text-gray-500">{bank.nameBn}</div>
+                  <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
+                  {supplier.nameBn && (
+                    <div className="text-sm text-gray-500">{supplier.nameBn}</div>
                   )}
                 </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 max-w-xs">
-                    {bank.headOfficeAddress || "-"}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatWebsite(bank.website || '')}
-                  </div>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                  {getProductBadge(supplier.supplierProduct)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                  <StatusBadge active={bank.active} />
+                  {getTypeBadge(supplier.supplierType)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{supplier.responsiblePerson}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{supplier.mobile}</div>
+                  {supplier.telephone && (
+                    <div className="text-sm text-gray-500">{supplier.telephone}</div>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                  <StatusBadge active={supplier.isActive} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    itemId={bank.id} 
-                    itemName={bank.name}
-                    itemType="bank"
-                    onDeleteClick={handleDeleteClick} 
+                    itemId={supplier.id}
+                    itemName={supplier.name}
+                    itemType="supplier"
+                    onDeleteClick={handleDeleteClick}
                   />
                 </td>
               </tr>
@@ -188,10 +218,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
           </tbody>
         </table>
         
-        {paginatedBanks.length === 0 && (
+        {paginatedSuppliers.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">
-              {searchTerm ? "No matching banks found" : "No banks found"}
+              {searchTerm ? "No matching suppliers found" : "No suppliers found"}
             </p>
             {searchTerm ? (
               <button
@@ -205,10 +235,10 @@ export default function BankTable({ initialBanks }: BankTableProps) {
               </button>
             ) : (
               <Link 
-                href="/banks/create" 
+                href="/suppliers/create" 
                 className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
               >
-                Add your first bank
+                Add your first supplier
               </Link>
             )}
           </div>
@@ -232,8 +262,8 @@ export default function BankTable({ initialBanks }: BankTableProps) {
         isOpen={deleteModal.isOpen}
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
-        itemName={deleteModal.bankName || "this bank"}
-        itemType="bank"
+        itemName={deleteModal.supplierName || "this supplier"}
+        itemType="suppliers"
       />
 
       {/* Toast Notification */}
