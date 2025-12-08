@@ -63,7 +63,7 @@ export default function StatisticsCards({ shops }: StatisticsCardsProps) {
         </div>
       </div>
 
-      {/* Target Analysis */}
+      {/* Target Analysis
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Target Distribution</h3>
@@ -140,7 +140,7 @@ export default function StatisticsCards({ shops }: StatisticsCardsProps) {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Target Comparison */}
       <div className="mt-6 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">

@@ -23,7 +23,7 @@ export default function StatisticsCards({ costCenters }: StatisticsCardsProps) {
   return (
     <>
       {/* Summary Cards */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Total Cost Centers</h3>
           <p className="text-3xl font-bold text-blue-600">{totalCostCenters}</p>
@@ -43,7 +43,7 @@ export default function StatisticsCards({ costCenters }: StatisticsCardsProps) {
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Office Centers</h3>
           <p className="text-3xl font-bold text-indigo-600">{officeCenters}</p>
         </div>
-      </div>
+      </div> */}
 
       {/* Type Distribution Cards */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">

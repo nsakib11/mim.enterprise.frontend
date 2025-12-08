@@ -29,6 +29,7 @@ export default function RootLayout({
     suppliers: false,
     units: false,
     customers: false,
+    report: false,
   });
 
   const toggleSection = (section: string) => {
@@ -384,12 +385,12 @@ export default function RootLayout({
                {/* report */}
                <div className="mt-2">
                 <button
-                  onClick={() => toggleSection("suppliers")}
+                  onClick={() => toggleSection("report")}
                   className="font-semibold px-2 py-1 block hover:bg-gray-200 rounded w-full text-left"
                 >
                   Report
                 </button>
-                {expandedSections.suppliers && (
+                {expandedSections.report && (
                   <div className="flex flex-col ml-4 mt-1 space-y-1">
                     <Link
                       href="/report"

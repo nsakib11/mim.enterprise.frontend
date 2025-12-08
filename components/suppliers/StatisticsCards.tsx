@@ -153,7 +153,7 @@ export default function StatisticsCards({ suppliers }: StatisticsCardsProps) {
       </div> */}
 
       {/* Supplier Analysis */}
-      <div className="mt-6 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+      {/* <div className="mt-6 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Supplier Analysis</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-4 bg-orange-50 rounded-lg">
@@ -185,7 +185,7 @@ export default function StatisticsCards({ suppliers }: StatisticsCardsProps) {
             <div className="text-xs text-gray-500 mt-1">All contact fields filled</div>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
