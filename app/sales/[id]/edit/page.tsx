@@ -484,15 +484,15 @@ const handleSubmit = async (e: React.FormEvent) => {
               <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <label className="block text-sm font-medium text-blue-800">Total Amount</label>
-                  <p className="text-xl font-bold text-blue-900">${sale.totalAmount?.toFixed(2)}</p>
+                  <p className="text-xl font-bold text-blue-900">৳{sale.totalAmount?.toFixed(2)}</p>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 text-center">
                   <label className="block text-sm font-medium text-green-800">Paid Amount</label>
-                  <p className="text-xl font-bold text-green-900">${sale.paidAmount?.toFixed(2)}</p>
+                  <p className="text-xl font-bold text-green-900">৳{sale.paidAmount?.toFixed(2)}</p>
                 </div>
                 <div className="bg-red-50 rounded-lg p-4 text-center">
                   <label className="block text-sm font-medium text-red-800">Due Amount</label>
-                  <p className="text-xl font-bold text-red-900">${sale.dueAmount?.toFixed(2)}</p>
+                  <p className="text-xl font-bold text-red-900">৳{sale.dueAmount?.toFixed(2)}</p>
                 </div>
               </div>
             </div>

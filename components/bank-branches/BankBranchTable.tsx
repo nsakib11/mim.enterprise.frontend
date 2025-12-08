@@ -4,10 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { BankBranch, Bank } from "@/utils/types";
 import { deleteBankBranch } from "@/utils/api";
-import StatusBadge from "../components/StatusBadge";
-import ActionsDropdown from "../components/ActionsDropdown";
-import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
-import Toast from "../components/Toast";
+import { usePagination } from "@/utils/usePagination";
+import StatusBadge from "../StatusBadge";
+import ActionsDropdown from "../ActionsDropdown";
+import DeleteConfirmationModal from "../DeleteConfirmationModal";
+import Toast from "../Toast";
+import Pagination from "../Pagination";
+import TableControls from "../TableControl";
 
 interface BankBranchTableProps {
   initialBranches: BankBranch[];
@@ -20,6 +23,27 @@ export default function BankBranchTable({
 }: BankBranchTableProps) {
   const [bankBranches, setBankBranches] = useState<BankBranch[]>(initialBranches);
   const [banks] = useState<Bank[]>(initialBanks);
+  
+  // Use pagination hook
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedData,
+    totalPages,
+    totalItems,
+    searchTerm,
+    setSearchTerm,
+    startIndex,
+    endIndex,
+    hasNextPage,
+    hasPrevPage,
+    setPageSize,
+  } = usePagination({
+    data: bankBranches,
+    itemsPerPage: 10,
+    searchableFields: ['code', 'name', 'nameBn', 'address', 'mobile', 'email', 'routingNo'],
+  });
+  
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; branchId?: number; branchName?: string }>({
     isOpen: false,
   });
@@ -28,6 +52,7 @@ export default function BankBranchTable({
     message: '',
     type: 'success'
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
@@ -43,19 +68,30 @@ export default function BankBranchTable({
     if (!deleteModal.branchId) return;
 
     try {
+      setIsLoading(true);
       await deleteBankBranch(deleteModal.branchId);
+      // Remove from local state
       setBankBranches(prev => prev.filter(branch => branch.id !== deleteModal.branchId));
       showToast('Bank branch deleted successfully', 'success');
     } catch (error) {
       console.error('Delete failed:', error);
       showToast('Failed to delete bank branch', 'error');
     } finally {
+      setIsLoading(false);
       setDeleteModal({ isOpen: false });
     }
   };
 
   const handleDeleteCancel = () => {
     setDeleteModal({ isOpen: false });
+  };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  const handleItemsPerPageChange = (limit: number) => {
+    setPageSize(limit);
   };
 
   const getBankName = (bankId?: number) => {
@@ -72,6 +108,14 @@ export default function BankBranchTable({
 
   return (
     <>
+      <TableControls
+        onSearch={handleSearch}
+        onItemsPerPageChange={handleItemsPerPageChange}
+        searchPlaceholder="Search bank branches..."
+        isLoading={isLoading}
+        showRefresh={false}
+      />
+
       <div className="bg-white rounded-lg shadow overflow-visible">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -103,7 +147,7 @@ export default function BankBranchTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {bankBranches.map(branch => (
+            {paginatedData.map(branch => (
               <tr key={branch.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{branch.code}</div>
@@ -150,9 +194,10 @@ export default function BankBranchTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                   <ActionsDropdown 
-                    branchId={branch.id} 
-                    branchName={branch.name}
-                    onDeleteClick={handleDeleteClick} 
+                    itemId={branch.id}
+                    itemName={branch.name}
+                    itemType="bank-branch"
+                    onDeleteClick={handleDeleteClick}
                   />
                 </td>
               </tr>
@@ -160,18 +205,41 @@ export default function BankBranchTable({
           </tbody>
         </table>
         
-        {bankBranches.length === 0 && (
+        {paginatedData.length === 0 && (
           <div className="text-center py-8">
-            <p className="text-gray-500 text-lg">No bank branches found</p>
-            <Link 
-              href="/bank-branches/create" 
-              className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
-            >
-              Add your first bank branch
-            </Link>
+            <p className="text-gray-500 text-lg">
+              {searchTerm ? "No matching bank branches found" : "No bank branches found"}
+            </p>
+            {searchTerm ? (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
+              >
+                Clear search
+              </button>
+            ) : (
+              <Link 
+                href="/bank-branches/create" 
+                className="text-blue-500 hover:text-blue-700 mt-2 inline-block"
+              >
+                Add your first bank branch
+              </Link>
+            )}
           </div>
         )}
       </div>
+
+      {totalItems > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={10}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
@@ -179,6 +247,7 @@ export default function BankBranchTable({
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
         itemName={deleteModal.branchName || "this bank branch"}
+        itemType="bank-branch"
       />
 
       {/* Toast Notification */}
