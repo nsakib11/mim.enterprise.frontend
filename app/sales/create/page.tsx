@@ -148,8 +148,14 @@ export default function CreateSale() {
     e.preventDefault();
     try {
       setIsSubmitting(true);
-      await createSale(sale);
-      router.push("/sales");
+      // await createSale(sale);
+      // router.push("/sales");
+      const createdSale = await createSale(sale);
+      if (createdSale && createdSale.id) {
+        router.push(`/sales/${createdSale.id}`);
+      } else {
+        router.push("/sales");
+      }
     } catch (error) {
       console.error('Error creating sale:', error);
     } finally {
@@ -316,7 +322,9 @@ export default function CreateSale() {
                     id="paidAmount"
                     type="number" 
                     name="paidAmount" 
-                    value={sale.paidAmount} 
+                    placeholder="Enter Value"
+                    // value={sale.paidAmount} 
+                    value={sale.paidAmount === 0 ? "" : sale.paidAmount}
                     onChange={handleMasterChange} 
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                     step="0.01"
@@ -421,7 +429,9 @@ export default function CreateSale() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                       <input 
                         type="number" 
-                        value={item.quantity} 
+                        placeholder="Enter Value"
+                        // value={item.quantity} 
+                        value={item.quantity === 0 ? "" : item.quantity}
                         onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                         step="0.01"
@@ -434,7 +444,9 @@ export default function CreateSale() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Unit Price</label>
                       <input 
                         type="number" 
-                        value={item.unitPrice} 
+                        placeholder="Enter Value"
+                        // value={item.unitPrice} 
+                        value={item.unitPrice === 0 ? "" : item.unitPrice}
                         onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                         step="0.01"
@@ -459,7 +471,9 @@ export default function CreateSale() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Delivered Qty</label>
                       <input 
                         type="number" 
-                        value={item.deliveredQuantity} 
+                        placeholder="Enter Value"
+                        // value={item.deliveredQuantity} 
+                        value={item.deliveredQuantity === 0 ? "" : item.deliveredQuantity}
                         onChange={(e) => handleItemChange(index, 'deliveredQuantity', parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                         step="0.01"

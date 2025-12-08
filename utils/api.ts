@@ -216,6 +216,7 @@ export const deleteInventory = (id: number) =>
 
 
 const INVOICE_API_URL = "http://localhost:8080/api/purchases";
+const SALES_INVOICE_API_URL = "http://localhost:8080/api/sales";
 
 // ------------------ Invoice Generation ------------------
 export const generatePurchaseInvoice = async (purchaseId: number, format: 'pdf' | 'word' | 'excel' = 'pdf'): Promise<Blob> => {
@@ -235,6 +236,36 @@ export const downloadPurchaseInvoice = async (purchaseId: number, format: 'pdf' 
     
     const fileExtension = getFileExtension(format);
     const filename = `purchase_invoice_${purchaseId}.${fileExtension}`;
+    link.download = filename;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error('Error downloading invoice:', error);
+    throw error;
+  }
+};
+
+export const generateSalesInvoice = async (saleId: number, format: 'pdf' | 'word' | 'excel' = 'pdf'): Promise<Blob> => {
+  const response = await axios.get(`${SALES_INVOICE_API_URL}/${saleId}/invoice?format=${format}`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export const downloadSalesInvoice = async (saleId: number, format: 'pdf' | 'word' | 'excel' = 'pdf'): Promise<void> => {
+  try {
+    const blob = await generateSalesInvoice(saleId, format);
+    
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    
+    const fileExtension = getFileExtension(format);
+    const filename = `sales_invoice_${saleId}.${fileExtension}`;
     link.download = filename;
     
     document.body.appendChild(link);

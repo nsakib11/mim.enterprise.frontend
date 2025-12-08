@@ -395,7 +395,13 @@ export default function RootLayout({
                       href="/report"
                       className="hover:bg-gray-200 rounded px-2 py-1"
                     >
-                      Invoice
+                      Purchases Invoice
+                    </Link>
+                    <Link
+                      href="/report/sales"
+                      className="hover:bg-gray-200 rounded px-2 py-1"
+                    >
+                      Sales Invoice
                     </Link>
                     
                   </div>
