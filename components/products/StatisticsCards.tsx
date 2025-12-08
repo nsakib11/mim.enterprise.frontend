@@ -120,7 +120,7 @@ export default function StatisticsCards({ products }: StatisticsCardsProps) {
             </div>
           </div>
           
-          <div className="mt-6 pt-6 border-t border-gray-200">
+          {/* <div className="mt-6 pt-6 border-t border-gray-200">
             <h4 className="text-md font-semibold text-gray-800 mb-3">Additional Stats</h4>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -142,7 +142,7 @@ export default function StatisticsCards({ products }: StatisticsCardsProps) {
                 </span>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
